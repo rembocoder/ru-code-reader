@@ -1,0 +1,6 @@
+say_cache/
+*.log
+say_last.txt
+__pycache__/
+piper/
+voices/
