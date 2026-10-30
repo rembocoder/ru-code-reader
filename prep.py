@@ -159,6 +159,8 @@ def arpa_to_ru(phones, word):
                 v = 'о'                                    # what → вот, want → вонт, swap → своп
             elif p == 'ER1':
                 v = 'ор' if i and re.sub(r'\d', '', phones[i - 1]) == 'W' else 'ёр'
+            elif base == 'UW' and g[:1] == 'e' and i and re.sub(r'\d', '', phones[i - 1]) in ('N', 'T', 'D', 'S', 'Z'):
+                v = 'ью'                                   # new → нью, news → ньюз, stew → стью (по-британски)
             else:
                 v = ARPA.get(base, '')
             out += v
