@@ -198,6 +198,10 @@ def en_word(w):
         return ACRONYMS_UPPER[w]
     if len(w) == 1:                                    # одиночная буква — по названию
         return LETTERS[w.upper()]
+    if re.fullmatch(r'h+m+', lw):                     # hm, hmm, hmmm — «хм»
+        return 'хм'
+    if re.fullmatch(r'[b-df-hj-np-tv-z]th', lw):        # nth, kth, mth — «энс», «кейс», «эмс»
+        return LETTERS[lw[0].upper()] + 'с'
     # аббревиатуры по буквам: без гласных (http, ssh, npm, pwd) или из списка SPELL_WORDS (api, url, cpu)
     if lw in SPELL_WORDS or (len(w) <= 6 and not re.search(r'[aeiouy]', lw)):
         return ' '.join(LETTERS[c] for c in w.upper())
