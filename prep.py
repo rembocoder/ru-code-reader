@@ -162,7 +162,7 @@ def arpa_to_ru(phones, word):
                 v = 'ав'                                   # power → павэр, а не пауэр
             elif p in REDUCED and g:
                 v = SPELL.get(g[0], ARPA.get(base, ''))
-            elif base == 'AA' and 'o' in g:
+            elif base == 'AA' and ('o' in g or 'au' in g):   # bought, cause, caught — «о»
                 v = 'о'
             elif base in ('AA', 'AH') and 'a' in g and i and re.sub(r'\d', '', phones[i - 1]) == 'W':
                 v = 'о'                                    # what → вот, want → вонт, swap → своп
