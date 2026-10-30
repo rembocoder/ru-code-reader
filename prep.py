@@ -16,6 +16,11 @@ STRESS = {
     # 'деплоить': 'депл+оить',
 }
 
+# Читать по буквам, хотя в них есть гласные (слова без гласных — http, ssh — читаются по буквам и так)
+SPELL_WORDS = {'url', 'uri', 'api', 'cpu', 'gpu', 'usb', 'ui', 'ux', 'id', 'io', 'ip', 'os', 'vm', 'utf',
+               'html', 'xml', 'sql', 'pdf', 'ide', 'ai', 'llm', 'tts', 'ssd', 'hdd', 'abi', 'sdk',
+               'cli', 'oop', 'tcp', 'udp', 'vpn', 'dns', 'ssl', 'tls', 'jwt', 'uuid'}
+
 CUSTOM = {
     'close': 'клоуз',
     'handoff': 'хэндоф',
@@ -193,6 +198,9 @@ def en_word(w):
         return ACRONYMS_UPPER[w]
     if len(w) == 1:                                    # одиночная буква — по названию
         return LETTERS[w.upper()]
+    # аббревиатуры по буквам: без гласных (http, ssh, npm, pwd) или из списка SPELL_WORDS (api, url, cpu)
+    if lw in SPELL_WORDS or (len(w) <= 6 and not re.search(r'[aeiouy]', lw)):
+        return ' '.join(LETTERS[c] for c in w.upper())
     if w.isupper() and len(w) <= 5:
         return ' '.join(LETTERS[c] for c in w)
     if lw in CMU:
