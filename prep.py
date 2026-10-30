@@ -21,7 +21,7 @@ SPELL_WORDS = {'url', 'uri', 'api', 'cpu', 'gpu', 'usb', 'ui', 'ux', 'id', 'io',
                'html', 'xml', 'sql', 'pdf', 'ide', 'ai', 'llm', 'tts', 'ssd', 'hdd', 'abi', 'sdk',
                'cli', 'oop', 'tcp', 'udp', 'vpn', 'dns', 'ssl', 'tls', 'jwt', 'uuid',
                # валюты
-               'usd', 'eur', 'rub', 'gbp', 'jpy', 'cny', 'chf', 'uah', 'kzt', 'byn', 'btc', 'usdt'}
+               'usd', 'eur', 'gbp', 'jpy', 'cny', 'chf', 'uah', 'kzt', 'byn', 'btc', 'usdt'}
 
 CUSTOM = {
     'close': 'клоуз',
@@ -31,6 +31,7 @@ CUSTOM = {
     'python': 'пайтон', 'pythons': 'пайтонс',
     'window': 'виндоу', 'windows': 'виндоус',
     'ssh': 'эс эс аш',
+    'rub': 'руб',
     'ubuntu': 'убунту',                               # в словаре ошибка: без «н»
     'ctrl': 'контрол', 'alt': 'альт', 'esc': 'эскэйп',
 }
