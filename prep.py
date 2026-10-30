@@ -213,6 +213,7 @@ def en_word(w):
     parts = split_cmu(lw)
     if parts and len(parts) <= 3:
         return ''.join(arpa_to_ru(CMU[p][0], p) for p in parts)
+    lw = re.sub(r'^u', 'ю', lw)                        # u в начале — «ю»: usd → юсд, ubuntu → юбунту
     lw = re.sub(r'c(?=[eiy])', 'с', lw)               # c перед e, i, y — «с»: cipher, accent → аксэнт
     for a, b in FALLBACK:
         lw = lw.replace(a, b)
