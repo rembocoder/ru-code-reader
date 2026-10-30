@@ -19,7 +19,9 @@ STRESS = {
 # Читать по буквам, хотя в них есть гласные (слова без гласных — http, ssh — читаются по буквам и так)
 SPELL_WORDS = {'url', 'uri', 'api', 'cpu', 'gpu', 'usb', 'ui', 'ux', 'id', 'io', 'ip', 'os', 'vm', 'utf',
                'html', 'xml', 'sql', 'pdf', 'ide', 'ai', 'llm', 'tts', 'ssd', 'hdd', 'abi', 'sdk',
-               'cli', 'oop', 'tcp', 'udp', 'vpn', 'dns', 'ssl', 'tls', 'jwt', 'uuid'}
+               'cli', 'oop', 'tcp', 'udp', 'vpn', 'dns', 'ssl', 'tls', 'jwt', 'uuid',
+               # валюты
+               'usd', 'eur', 'rub', 'gbp', 'jpy', 'cny', 'chf', 'uah', 'kzt', 'byn', 'btc', 'usdt'}
 
 CUSTOM = {
     'close': 'клоуз',
