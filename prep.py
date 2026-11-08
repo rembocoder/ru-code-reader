@@ -360,10 +360,57 @@ def time_to_words(m):
 
 ABBR = [(r'\bт\.\s?е\.', 'то есть'), (r'\bт\.\s?к\.', 'так как'), (r'\bт\.\s?д\.', 'так далее'),
         (r'\bт\.\s?п\.', 'тому подобное'), (r'\bнапр\.', 'например'), (r'\bсм\.', 'смотри'),
-        (r'\bдр\.', 'другие'), (r'\bтыс\.', 'тысяч'), (r'\bмлн\.?', 'миллионов'),
+(r'\bтыс\.', 'тысяч'), (r'\bмлн\.?', 'миллионов'),
         (r'\bмлрд\.?', 'миллиардов'), (r'\bруб\.', 'рублей'),
-        (r'\be\.\s?g\.', 'например'), (r'\bi\.\s?e\.', 'то есть'), (r'\betc\.', 'и так далее'),
+        (r'\be\.\s?g\.', 'фор игзампл'), (r'\beg\b\.?', 'фор игзампл'), (r'\bi\.\s?e\.', 'то есть'),
+        (r'\betc\b\.?', 'эт сэтэра'),
         (r'\bvs\b\.?', 'против')]
+
+def plural_abbr(m, lemma):
+    # «и др.», «и пр.» → «другие/прочие» в падеже соседнего слова:
+    # «и др. люди» — по следующему слову; «о книгах и пр.» — по слову перед «и»
+    after, before = m.string[m.end():], m.string[:m.start()]
+    case = None
+    nm = re.match(r'\s*([а-яё]+)', after)                    # следующее слово со строчной — к нему и относится
+    if nm:
+        for x in morph.parse(nm.group(1)):
+            if x.tag.number == 'plur' and ({'NOUN', 'ADJF'} & set(x.tag.grammemes)):
+                case = x.tag.case
+                break
+    if not case:
+        pm = re.search(r'([а-яёА-ЯЁ]+)[\s,]*(?:и|или|,)?\s*$', before)
+        if pm:
+            for x in morph.parse(pm.group(1).lower()):
+                if {'NOUN', 'ADJF', 'NPRO'} & set(x.tag.grammemes) and x.tag.case:
+                    case = x.tag.case
+                    break
+    w = morph.parse(lemma)[0]
+    f = w.inflect({'plur', case or 'nomn'}) if (case or 'nomn') != 'accs' else w.inflect({'plur', 'nomn'})
+    word = f.word if f else lemma
+    end = after.lstrip()
+    return word + ('.' if not end or end[0].isupper() else '')
+
+# С. В. Максимов, Максимов С. В. — инициалы по названиям букв, без точек и пауз
+RU_LETTERS = dict(zip('АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЭЮЯ',
+    ['а', 'бэ', 'вэ', 'гэ', 'дэ', 'е', 'ё', 'жэ', 'зэ', 'и', 'и краткое', 'ка', 'эль', 'эм', 'эн', 'о', 'пэ',
+     'эр', 'эс', 'тэ', 'у', 'эф', 'ха', 'цэ', 'че', 'ша', 'ща', 'э', 'ю', 'я']))
+
+def is_name(word):
+    return any({'Surn', 'Name', 'Patr'} & set(x.tag.grammemes) for x in morph.parse(word))
+
+def initials(t):
+    def lead(m):                                           # «С. В. Максимов», «В. Максимов»
+        letters = re.findall(r'[А-ЯЁ]', m.group(1))
+        if len(letters) == 1 and not is_name(m.group(2)):
+            return m.group(0)                             # «пункт А. Затем» — не инициал
+        return ' '.join(RU_LETTERS[c] for c in letters) + ' ' + m.group(2)
+    t = re.sub(r'(?<![\w.])((?:[А-ЯЁ]\.\s*){1,2})(?=[А-ЯЁ][а-яё])([А-ЯЁ][а-яё]+)', lead, t)
+    def trail(m):                                          # «Максимов С. В.» — только двойные инициалы
+        tail = m.string[m.end():].lstrip()
+        dot = '.' if not tail or tail[0].isupper() else ''
+        return m.group(1) + ' ' + RU_LETTERS[m.group(2)] + ' ' + RU_LETTERS[m.group(3)] + dot
+    t = re.sub(r'([А-ЯЁ][а-яё]+)\s+([А-ЯЁ])\.\s*([А-ЯЁ])\.', trail, t)
+    return t
 
 DIGITS = ['ноль', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять']
 
@@ -475,6 +522,9 @@ def prepare(t):
     t = re.sub(r'([$€¥₽])\s?(\d+(?:[.,]\d+)?)', cur_before, t)          # $5 → 5 долларов
     t = re.sub(r'(\d+(?:[.,]\d+)?)\s?([$€¥₽])', cur_after, t)           # 100¥ → 100 юаней
     t = t.replace('$', ' доллар ').replace('€', ' евро ').replace('¥', ' юань ').replace('₽', ' рубль ')
+    t = initials(t)
+    t = re.sub(r'\bдр\.', lambda m: plural_abbr(m, 'другой'), t)
+    t = re.sub(r'\bпр\.', lambda m: plural_abbr(m, 'прочий'), t)
     for a, b in ABBR:
         # если после сокращения начинается новое предложение — точку сохраняем
         t = re.sub(a, lambda m, b=b: b + ('.' if (lambda r: not r or r[0].isupper())(m.string[m.end():].lstrip()) else ''),
