@@ -572,12 +572,44 @@ def roman_ordinal(m):
         tags.add('anim' if anim else 'inan')
     return f'{word} {ord_words(n, tags)}'
 
+def roman_before_noun(m):
+    # «во II томе», «в IV главе», «XX съезд» — число согласуется со словом после него
+    rom, word = m.group(1), m.group(2)
+    n = roman_to_int(rom)
+    if not n:
+        return m.group(0)
+    for x in morph.parse(word.lower()):
+        if 'NOUN' in x.tag and x.normal_form in ORD_NOUNS and x.tag.number == 'sing' and 'inan' in x.tag:
+            gender = x.tag.gender if x.tag.gender in ('masc', 'femn', 'neut') else 'femn'
+            case = 'loct' if x.tag.case == 'loc2' else (x.tag.case or 'nomn')
+            tags = {gender, 'sing', case}
+            if case == 'accs' and gender == 'masc':
+                tags.add('inan')
+            return f'{ord_words(n, tags)} {word}'
+    return m.group(0)
+
+# Латинская буква с русским окончанием: «i-ое» → «итое», «n-ая» → «энная», «k-го» → «катого»
+MATH_LETTERS = dict(zip('abcdefghijklmnopqrstuvwxyz',
+    ['а', 'бэ', 'цэ', 'дэ', 'е', 'эф', 'гэ', 'аш', 'и', 'жи', 'ка', 'эль', 'эм', 'эн', 'о', 'пэ', 'ку',
+     'эр', 'эс', 'тэ', 'у', 'вэ', 'дубль вэ', 'икс', 'игрек', 'зэт']))
+ENDING_FIX = {'й': 'ый', 'го': 'ого', 'му': 'ому', 'м': 'ом', 'х': 'ых', 'ми': 'ыми', 'е': 'ое', 'я': 'ая'}
+
+def letter_ordinal(m):
+    letter, end = m.group(1).lower(), m.group(2).lower()
+    name = MATH_LETTERS[letter]
+    end = ENDING_FIX.get(end, end)
+    link = 'т' if name[-1] in 'аеёиоуыэюя' else 'н'      # «и-т-ое», «эн-н-ая»
+    return name + link + end
+
 # ---------- главная функция ----------
 def prepare(t):
     t = t.replace('\r\n', '\n').replace('\r', '\n')                       # переводы строк Windows
     t = re.sub(r'([=\-_~*#─━═—–])\1{3,}', ' ', t)                       # ==== / ---- разделители — молча
     t = re.sub(CENTURY_RE, century, t)                                    # в IX в., XV—XVI вв.
     t = re.sub(r'([А-ЯЁа-яё]+)\s+([IVXLC]+)\b(?![\'’])', roman_ordinal, t)  # Пётр I, глава IV
+    t = re.sub(r'(?<![A-Za-z])([IVXLC]+)\s+([А-ЯЁа-яё]+)', roman_before_noun, t)   # во II томе
+    t = re.sub(r'\b([Вв])\s+(?=втор)', lambda m: m.group(1) + 'о ', t)          # «в второй» → «во второй»
+    t = re.sub(r'(?<![A-Za-z\d])([A-Za-z])-([а-яё]{1,3})\b', letter_ordinal, t)    # i-ое, n-ая
     t = re.sub(r'(?<![.!?,;:\n])[ \t]*\n(?=[ \t]*[-*•●▪◦·][ \t]+)', '.\n', t)   # пункт списка — с новой фразы
     t = re.sub(r'(?m)^[ \t]*[-*•●▪◦·][ \t]+', '', t)                    # маркеры списка
     t = re.sub(r'(?m)^[ \t]*#{1,6}[ \t]+(.+?)[ \t]*$',
