@@ -542,11 +542,42 @@ def century(m):
 CENTURY_RE = (r'(?<![A-Za-z])([IVXLC]+)(?:\s*[—–-]\s*([IVXLC]+))?\s*'
               r'(в\.\s?в\.|вв\.|в\.|век(?:а|ов|у|ом|е|ам|ами|ах)?\b)')
 
+# Римское число после имени или такого слова — порядковое: «Пётр I», «при Екатерине II», «в главе IV».
+# Перед ним обязательно русское слово, поэтому «I love you» остаётся английским «ай».
+ORD_NOUNS = {'глава', 'том', 'часть', 'раздел', 'книга', 'статья', 'пункт', 'параграф', 'съезд', 'созыв',
+             'тысячелетие', 'акт', 'сезон', 'класс', 'этап', 'уровень', 'издание', 'выпуск', 'симфония',
+             'конгресс', 'собор', 'легион', 'династия', 'рейх', 'отделение', 'приложение', 'серия', 'семестр'}
+
+def roman_ordinal(m):
+    word, rom = m.group(1), m.group(2)
+    n = roman_to_int(rom)
+    if not n:
+        return m.group(0)
+    best = None
+    for x in morph.parse(word):
+        if 'Name' in x.tag and word[0].isupper() and x.tag.number == 'sing':
+            best, anim = x, True
+            break
+        if 'NOUN' in x.tag and x.normal_form in ORD_NOUNS and x.tag.number == 'sing' and 'inan' in x.tag:
+            best, anim = x, False
+            break
+    if best is None:
+        return m.group(0)
+    gender = best.tag.gender if best.tag.gender in ('masc', 'femn', 'neut') else 'femn'
+    case = best.tag.case or 'nomn'
+    if case == 'loc2':
+        case = 'loct'
+    tags = {gender, 'sing', case}
+    if case == 'accs' and gender == 'masc':
+        tags.add('anim' if anim else 'inan')
+    return f'{word} {ord_words(n, tags)}'
+
 # ---------- главная функция ----------
 def prepare(t):
     t = t.replace('\r\n', '\n').replace('\r', '\n')                       # переводы строк Windows
     t = re.sub(r'([=\-_~*#─━═—–])\1{3,}', ' ', t)                       # ==== / ---- разделители — молча
     t = re.sub(CENTURY_RE, century, t)                                    # в IX в., XV—XVI вв.
+    t = re.sub(r'([А-ЯЁа-яё]+)\s+([IVXLC]+)\b(?![\'’])', roman_ordinal, t)  # Пётр I, глава IV
     t = re.sub(r'(?<![.!?,;:\n])[ \t]*\n(?=[ \t]*[-*•●▪◦·][ \t]+)', '.\n', t)   # пункт списка — с новой фразы
     t = re.sub(r'(?m)^[ \t]*[-*•●▪◦·][ \t]+', '', t)                    # маркеры списка
     t = re.sub(r'(?m)^[ \t]*#{1,6}[ \t]+(.+?)[ \t]*$',
