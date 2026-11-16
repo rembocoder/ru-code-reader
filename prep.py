@@ -609,7 +609,7 @@ def prepare(t):
     t = re.sub(CENTURY_RE, century, t)                                    # в IX в., XV—XVI вв.
     t = re.sub(r'([А-ЯЁа-яё]+)\s+([IVXLC]+)\b(?![\'’])', roman_ordinal, t)  # Пётр I, глава IV
     t = re.sub(r'(?<![A-Za-z])([IVXLC]+)\s+([А-ЯЁа-яё]+)', roman_before_noun, t)   # во II томе
-    t = re.sub(r'\b([Вв])\s+(?=втор)', lambda m: m.group(1) + 'о ', t)          # «в второй» → «во второй»
+    t = re.sub(r'\b([ВвКк])\s+(?=втор)', lambda m: m.group(1) + 'о ', t)        # «в/к второй» → «во/ко второй»
     t = re.sub(r'(?<![A-Za-z\d])([A-Za-z])-([а-яё]{1,3})\b', letter_ordinal, t)    # i-ое, n-ая
     t = re.sub(r'(?<![.!?,;:\n])[ \t]*\n(?=[ \t]*[-*•●▪◦·][ \t]+)', '.\n', t)   # пункт списка — с новой фразы
     t = re.sub(r'(?m)^[ \t]*[-*•●▪◦·][ \t]+', '', t)                    # маркеры списка
