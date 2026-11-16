@@ -495,10 +495,58 @@ def sec_unit(m):
             return m.group(0)          # «с ошибкой», «с собой» — предлог
     return unit_words(m.group(1), 'секунда', m)
 
+# ---------- века римскими цифрами: «в IX в.», «XV—XVI вв.», «XX век» ----------
+ROMAN = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100}
+
+def roman_to_int(s):
+    total, prev = 0, 0
+    for ch in reversed(s):
+        v = ROMAN[ch]
+        total = total - v if v < prev else total + v
+        prev = max(prev, v)
+    # проверка, что запись правильная (IIII, VX и т. п. — не числа)
+    back, n = '', total
+    for v, r in ((100, 'C'), (90, 'XC'), (50, 'L'), (40, 'XL'), (10, 'X'), (9, 'IX'), (5, 'V'), (4, 'IV'), (1, 'I')):
+        while n >= v:
+            back += r; n -= v
+    return total if back == s and 0 < total <= 30 else None
+
+def century(m):
+    a, b, word = m.group(1), m.group(2), m.group(3)
+    na = roman_to_int(a)
+    nb = roman_to_int(b) if b else None
+    if not na or (b and not nb):
+        return m.group(0)
+    plural = b is not None
+    lw = word.lower().replace(' ', '')
+    if lw.startswith('век'):                           # слово целиком — падеж и число берём от него
+        cands = [x for x in morph.parse(lw) if x.normal_form == 'век']
+        pick = [x for x in cands if (x.tag.number == 'plur') == plural] or cands
+        case = pick[0].tag.case if pick else 'nomn'
+        dot = ''
+    else:                                              # «в.», «вв.», «в.в.» — падеж по предлогу
+        pm = re.search(r'([а-яёА-ЯЁ]+)\s*$', m.string[:m.start()])
+        prev = pm.group(1).lower() if pm else ''
+        case = ('loct' if prev in ('в', 'во') else 'gent' if prev in ('с', 'со') else PREP.get(prev, 'nomn'))
+        tail = m.string[m.end():].lstrip()
+        dot = '.' if not tail or tail[0].isupper() else ''
+    if case == 'accs':
+        case = 'nomn'
+    if case == 'loc2':
+        case = 'loct'
+    nums = [ord_words(n, {'masc', 'sing', case}) for n in ([na, nb] if plural else [na])]
+    noun = morph.parse('век')[0].inflect({'plur' if plural else 'sing', case})
+    noun = noun.word if noun else 'век'
+    return ' ' + ' — '.join(nums) + ' ' + noun + dot + ' '
+
+CENTURY_RE = (r'(?<![A-Za-z])([IVXLC]+)(?:\s*[—–-]\s*([IVXLC]+))?\s*'
+              r'(в\.\s?в\.|вв\.|в\.|век(?:а|ов|у|ом|е|ам|ами|ах)?\b)')
+
 # ---------- главная функция ----------
 def prepare(t):
     t = t.replace('\r\n', '\n').replace('\r', '\n')                       # переводы строк Windows
     t = re.sub(r'([=\-_~*#─━═—–])\1{3,}', ' ', t)                       # ==== / ---- разделители — молча
+    t = re.sub(CENTURY_RE, century, t)                                    # в IX в., XV—XVI вв.
     t = re.sub(r'(?<![.!?,;:\n])[ \t]*\n(?=[ \t]*[-*•●▪◦·][ \t]+)', '.\n', t)   # пункт списка — с новой фразы
     t = re.sub(r'(?m)^[ \t]*[-*•●▪◦·][ \t]+', '', t)                    # маркеры списка
     t = re.sub(r'(?m)^[ \t]*#{1,6}[ \t]+(.+?)[ \t]*$',
