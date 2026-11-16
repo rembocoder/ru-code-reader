@@ -555,7 +555,8 @@ def roman_ordinal(m):
         return m.group(0)
     best = None
     for x in morph.parse(word):
-        if 'Name' in x.tag and word[0].isupper() and len(word) > 2 and x.tag.number == 'sing':
+        if ('Name' in x.tag and word[0].isupper() and x.tag.number == 'sing'
+                and word.lower() not in PREP and word.lower() not in ('в', 'во', 'на', 'с', 'со', 'по', 'за')):
             best, anim = x, True
             break
         if 'NOUN' in x.tag and x.normal_form in ORD_NOUNS and x.tag.number == 'sing' and 'inan' in x.tag:
