@@ -359,7 +359,7 @@ def time_to_words(m):
     return f' {out} '
 
 ABBR = [(r'\bт\.\s?е\.', 'то есть'), (r'\bт\.\s?к\.', 'так как'), (r'\bт\.\s?д\.', 'так далее'),
-        (r'\bт\.\s?п\.', 'тому подобное'), (r'\bнапр\.', 'например'), (r'\bсм\.', 'смотри'),
+        (r'\bт\.\s?п\.', 'тому подобное'), (r'\bнапр\.', 'например'), (r'\bсм\.', 'смотри'), (r'\bср\.', 'сравни'),
 (r'\bтыс\.', 'тысяч'), (r'\bмлн\.?', 'миллионов'),
         (r'\bмлрд\.?', 'миллиардов'), (r'\bруб\.', 'рублей'),
         (r'\be\.\s?g\.', 'фор игзампл'), (r'\beg\b\.?', 'фор игзампл'), (r'\bi\.\s?e\.', 'то есть'),
@@ -498,7 +498,7 @@ def sec_unit(m):
 # ---------- века римскими цифрами: «в IX в.», «XV—XVI вв.», «XX век» ----------
 ROMAN = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100}
 
-def roman_to_int(s):
+def roman_to_int(s, limit=30):
     total, prev = 0, 0
     for ch in reversed(s):
         v = ROMAN[ch]
@@ -509,7 +509,7 @@ def roman_to_int(s):
     for v, r in ((100, 'C'), (90, 'XC'), (50, 'L'), (40, 'XL'), (10, 'X'), (9, 'IX'), (5, 'V'), (4, 'IV'), (1, 'I')):
         while n >= v:
             back += r; n -= v
-    return total if back == s and 0 < total <= 30 else None
+    return total if back == s and 0 < total <= limit else None
 
 def century(m):
     a, b, word = m.group(1), m.group(2), m.group(3)
@@ -606,6 +606,10 @@ def letter_ordinal(m):
 def prepare(t):
     t = t.replace('\r\n', '\n').replace('\r', '\n')                       # переводы строк Windows
     t = re.sub(r'([=\-_~*#─━═—–])\1{3,}', ' ', t)                       # ==== / ---- разделители — молча
+    # § III.5.2 → § 3.5.2; «§§ IV–V», «§ II и III» — все номера подряд
+    t = re.sub(r'(§+\s*)([IVXLC]+[\d.]*(?:\s*(?:[–—-]|,|и)\s*[IVXLC]+[\d.]*)*)(?![A-Za-z])',
+               lambda m: m.group(1) + re.sub(r'[IVXLC]+', lambda r: str(roman_to_int(r.group(), 399) or r.group()),
+                                             m.group(2)), t)
     t = re.sub(CENTURY_RE, century, t)                                    # в IX в., XV—XVI вв.
     t = re.sub(r'([А-ЯЁа-яё]+)\s+([IVXLC]+)\b(?![\'’])', roman_ordinal, t)  # Пётр I, глава IV
     t = re.sub(r'(?<![A-Za-z])([IVXLC]+)\s+([А-ЯЁа-яё]+)', roman_before_noun, t)   # во II томе
@@ -654,7 +658,7 @@ def prepare(t):
     t = re.sub(r'(?<=[A-Za-z])[ \t]+(?=[А-Яа-яЁё])', ', ', t)          # латиница → кириллица: пауза
     t = re.sub(r'\b(?=[^\W_]*[^\W\d_])(?=[^\W_]*\d)[^\W_]+\b', mixed_word, t)  # nr2701, md5, v2
     t = t.replace('±', ' плюс минус ').replace('+', ' плюс ')
-    t = t.replace('§', ' параграф ')
+    t = t.replace('§§', ' параграфы ').replace('§', ' параграф ')
     # перевод строки: если строка кончилась знаком препинания — длинная пауза, как после точки
     t = re.sub(r'[ \t]*[;:][ \t]*\n\s*', '. ǀ ', t)                    # ; и : в конце строки — конец фразы
     t = re.sub(r',[ \t]*\n\s*', ', ', t)                                # запятая — терминал мог перенести строку
