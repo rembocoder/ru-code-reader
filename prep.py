@@ -610,6 +610,11 @@ def prepare(t):
     t = re.sub(r'(§+\s*)([IVXLC]+[\d.]*(?:\s*(?:[–—-]|,|и)\s*[IVXLC]+[\d.]*)*)(?![A-Za-z])',
                lambda m: m.group(1) + re.sub(r'[IVXLC]+', lambda r: str(roman_to_int(r.group(), 399) or r.group()),
                                              m.group(2)), t)
+    # «с. 98» → «страница девяносто восемь», «с. 98–99», «сс. 12–15» → «страницы … — …»
+    t = re.sub(r'(?<![\w.])([Сс])(с?)\.\s*(\d+)(?:\s*[–—-]\s*(\d+))?',
+               lambda m: (('С' if m.group(1) == 'С' else 'с') + ('траницы ' if m.group(4) or m.group(2) else 'траница ')
+                          + num2words(int(m.group(3)), lang='ru')
+                          + (' — ' + num2words(int(m.group(4)), lang='ru') if m.group(4) else '')), t)
     t = re.sub(CENTURY_RE, century, t)                                    # в IX в., XV—XVI вв.
     t = re.sub(r'([А-ЯЁа-яё]+)\s+([IVXLC]+)\b(?![\'’])', roman_ordinal, t)  # Пётр I, глава IV
     t = re.sub(r'(?<![A-Za-z])([IVXLC]+)\s+([А-ЯЁа-яё]+)', roman_before_noun, t)   # во II томе
